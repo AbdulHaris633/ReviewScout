@@ -12,6 +12,7 @@ A lead generation tool for review growth agencies. Enter a city + industry, get 
   
 )
 - **Google Places API (New)** key — [Google Cloud Console](https://console.cloud.google.com)
+- **SerpApi** key — [serpapi.com](https://serpapi.com)
 - **Anthropic API** key — [console.anthropic.com](https://console.anthropic.com)
 
 ### Setup
@@ -21,10 +22,11 @@ A lead generation tool for review growth agencies. Enter a city + industry, get 
 ```js
 const GLOBAL_CONFIG = {
   GOOGLE_MAPS_KEY: "your-google-key",
+  SERP_API_KEY:    "your-serpapi-key",
   ANTHROPIC_KEY:   "your-anthropic-key",
   GHL_DOMAIN:      "app.hub360ai.com",    // optional
   GHL_LOCATION_ID: "your-location-id",    // optional
-  GHL_LEAD_TAG:    "cold-call-interested"  // optional
+  GHL_LEAD_TAG:    "cold-call-interested", // optional
   GHL_API_KEY:     "your-ghl-api-key",    // optional
 };
 ```
