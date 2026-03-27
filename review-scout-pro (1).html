@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Scout Pro — Full Acquisition System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07090e; --surface: #0e1117; --surface2: #141720;
+  --border: #1e2230; --border2: #252a3a;
+  --accent: #f59e0b; --accent2: #fbbf24;
+  --accent-dim: rgba(245,158,11,0.12); --accent-glow: rgba(245,158,11,0.25);
+  --text: #dde3f0; --text-dim: #5a6278; --text-mid: #8891aa;
+  --hot: #ef4444; --hot-bg: rgba(239,68,68,0.1);
+  --warm: #f59e0b; --warm-bg: rgba(245,158,11,0.1);
+  --cold: #60a5fa; --cold-bg: rgba(96,165,250,0.1);
+  --green: #10b981; --green-bg: rgba(16,185,129,0.1);
+  --purple: #a78bfa; --purple-bg: rgba(167,139,250,0.1);
+  --radius: 8px;
+}
+html { font-size: 14px; }
+body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.015) 39px,rgba(255,255,255,.015) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.015) 39px,rgba(255,255,255,.015) 40px);
+  pointer-events: none; z-index: 0;
+}
+
+/* SETUP */
+#setup-screen { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; }
+.brand { text-align:center; margin-bottom:32px; }
+.brand-tag { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:4px; text-transform:uppercase; margin-bottom:10px; }
+.brand-title { font-size:44px; font-weight:800; letter-spacing:-1px; color:var(--text); line-height:1; }
+.brand-title span { color:var(--accent); }
+.brand-sub { font-size:13px; color:var(--text-mid); margin-top:8px; }
+.free-badge { display:inline-block; background:var(--green-bg); border:1px solid rgba(16,185,129,.3); color:var(--green); font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; padding:4px 10px; border-radius:20px; margin-top:10px; }
+.setup-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:34px; width:100%; max-width:600px; position:relative; overflow:hidden; }
+.setup-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); }
+.section-label { font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--accent); margin-bottom:14px; margin-top:26px; padding-bottom:7px; border-bottom:1px solid var(--border); }
+.section-label:first-of-type { margin-top:0; }
+.field-group { margin-bottom:15px; }
+.field-label { font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text-mid); margin-bottom:6px; display:block; }
+.field-input { width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius); padding:10px 13px; font-family:'Space Mono',monospace; font-size:12px; color:var(--text); outline:none; transition:border-color .2s,box-shadow .2s; appearance:none; }
+.field-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+.field-input::placeholder { color:var(--text-dim); }
+.field-input option { background:#1a1d2e; }
+.field-hint { font-size:10px; color:var(--text-dim); margin-top:5px; font-family:'Space Mono',monospace; line-height:1.5; }
+.field-hint a { color:var(--accent); text-decoration:none; }
+.field-hint a:hover { text-decoration:underline; }
+.field-label-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px; }
+.field-value { font-family:'Space Mono',monospace; font-size:14px; font-weight:700; color:var(--accent); }
+.range-input { width:100%; height:8px; background:var(--border2); border-radius:4px; appearance:none; outline:none; cursor:pointer; }
+.range-input::-webkit-slider-thumb { appearance:none; width:18px; height:18px; background:var(--accent); border-radius:50%; box-shadow:0 0 10px var(--accent-glow); transition:transform .1s; }
+.range-input::-webkit-slider-thumb:hover { transform:scale(1.2); }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.btn-generate { width:100%; padding:15px; background:var(--accent); color:#000; border:none; border-radius:var(--radius); font-family:'Syne',sans-serif; font-size:15px; font-weight:700; letter-spacing:1px; cursor:pointer; text-transform:uppercase; transition:background .2s,box-shadow .2s; margin-top:10px; }
+.btn-generate:hover { background:var(--accent2); box-shadow:0 0 30px var(--accent-glow); }
+.btn-generate:disabled { opacity:.5; cursor:not-allowed; }
+
+/* LOADING */
+#loading-screen { position:fixed; inset:0; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:100; }
+.loading-orb { width:64px; height:64px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:24px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-text { font-family:'Space Mono',monospace; font-size:12px; color:var(--text-mid); letter-spacing:2px; text-transform:uppercase; }
+.loading-step { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent); margin-top:10px; min-height:18px; }
+.loading-bar { width:280px; height:2px; background:var(--border2); margin-top:20px; border-radius:2px; overflow:hidden; }
+.loading-bar-fill { height:100%; background:var(--accent); width:0%; transition:width .4s ease; }
+
+/* RESULTS */
+#results-screen { display:none; position:relative; z-index:1; padding:24px; max-width:1600px; margin:0 auto; }
+.results-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:14px; }
+.results-title { font-size:21px; font-weight:700; }
+.results-meta { font-family:'Space Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:4px; }
+.results-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.btn { padding:9px 18px; border-radius:var(--radius); font-family:'Syne',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all .2s; border:none; display:inline-flex; align-items:center; gap:7px; }
+.btn-outline { background:transparent; border:1px solid var(--border2); color:var(--text-mid); }
+.btn-outline:hover { border-color:var(--text-mid); color:var(--text); }
+.btn-primary { background:var(--accent); color:#000; text-transform:uppercase; letter-spacing:.5px; }
+.btn-primary:hover { background:var(--accent2); box-shadow:0 0 20px var(--accent-glow); }
+
+.enrich-bar { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--purple); border-radius:var(--radius); padding:10px 16px; margin-bottom:14px; display:flex; align-items:center; gap:10px; font-size:11px; color:var(--text-mid); font-family:'Space Mono',monospace; }
+.enrich-spinner { width:14px; height:14px; border:2px solid var(--border2); border-top-color:var(--purple); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+.enrich-bar.done { border-left-color:var(--green); color:var(--green); }
+.enrich-bar.done .enrich-spinner { display:none; }
+
+.stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:18px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:13px 15px; }
+.stat-label { font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:7px; }
+.stat-value { font-family:'Space Mono',monospace; font-size:22px; font-weight:700; line-height:1; }
+.stat-value.hot{color:var(--hot);} .stat-value.warm{color:var(--warm);} .stat-value.cold{color:var(--cold);} .stat-value.green{color:var(--green);}
+
+.table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; min-width:1500px; }
+thead tr { background:var(--surface2); border-bottom:1px solid var(--border); }
+th { padding:12px 13px; text-align:left; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); white-space:nowrap; cursor:pointer; user-select:none; transition:color .15s; }
+th:hover { color:var(--text); }
+th.sorted { color:var(--accent); }
+tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:rgba(255,255,255,.02); }
+tbody tr.interested-row { background:rgba(16,185,129,.05); border-left:2px solid var(--green); }
+td { padding:12px 13px; vertical-align:middle; }
+
+.col-name { font-weight:600; min-width:155px; }
+.col-name small { display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:2px; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rating-badge { display:inline-flex; align-items:center; gap:4px; font-family:'Space Mono',monospace; font-size:13px; }
+.star { color:var(--accent); font-size:11px; }
+.no-data { color:var(--text-dim); font-size:11px; font-style:italic; }
+.review-count { font-family:'Space Mono',monospace; font-size:13px; }
+.review-count.low { color:var(--hot); font-weight:700; }
+.review-count.mid { color:var(--warm); }
+.review-count.ok  { color:var(--text-mid); }
+.score-wrap { display:flex; align-items:center; gap:8px; min-width:95px; }
+.score-num { font-family:'Space Mono',monospace; font-size:14px; font-weight:700; width:26px; }
+.score-bar { flex:1; height:4px; background:var(--border2); border-radius:2px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:2px; }
+.priority-badge { display:inline-block; padding:3px 9px; border-radius:20px; font-family:'Space Mono',monospace; font-size:9px; font-weight:700; white-space:nowrap; }
+.priority-hot  { background:var(--hot-bg);  color:var(--hot);  border:1px solid rgba(239,68,68,.25); }
+.priority-warm { background:var(--warm-bg); color:var(--warm); border:1px solid rgba(245,158,11,.25); }
+.priority-cold { background:var(--cold-bg); color:var(--cold); border:1px solid rgba(96,165,250,.25); }
+.talking-point { font-size:11px; max-width:240px; line-height:1.45; }
+.talking-point.loading { color:var(--purple); animation:pulse 1.5s ease infinite; }
+.talking-point.ready   { color:var(--text); font-style:italic; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+.action-cell { display:flex; flex-direction:column; gap:6px; min-width:152px; }
+.btn-int {
+  padding:7px 10px; border-radius:6px; font-family:'Syne',sans-serif; font-size:11px;
+  font-weight:700; cursor:pointer; border:none; transition:all .2s; text-align:center;
+  background:var(--green-bg); color:var(--green); border:1px solid rgba(16,185,129,.3);
+}
+.btn-int:hover { background:rgba(16,185,129,.2); }
+.btn-int.marked { background:var(--green); color:#000; border-color:var(--green); }
+.btn-rep {
+  padding:7px 10px; border-radius:6px; font-family:'Syne',sans-serif; font-size:11px;
+  font-weight:700; cursor:pointer; border:none; transition:all .2s; text-align:center;
+  background:var(--purple-bg); color:var(--purple); border:1px solid rgba(167,139,250,.3);
+}
+.btn-rep:hover { background:rgba(167,139,250,.2); }
+.btn-rep:disabled { opacity:.4; cursor:not-allowed; }
+.btn-reminder { padding:7px 10px; border-radius:6px; font-family:'Syne',sans-serif; font-size:11px; font-weight:700; cursor:pointer; border:none; transition:all .2s; text-align:center; background:rgba(245,158,11,.1); color:var(--warm); border:1px solid rgba(245,158,11,.3); }
+.btn-reminder:hover { background:rgba(245,158,11,.2); }
+.btn-reminder.set { background:var(--warm); color:#000; border-color:var(--warm); }
+.reminder-cell { min-width:160px; }
+.reminder-wrap { display:flex; flex-direction:column; gap:4px; }
+.reminder-status { font-family:'Space Mono',monospace; font-size:10px; padding:3px 8px; border-radius:4px; border:1px solid var(--border2); background:var(--surface2); color:var(--text); cursor:pointer; outline:none; }
+.reminder-status:focus { border-color:var(--accent); }
+.reminder-date { font-family:'Space Mono',monospace; font-size:10px; padding:3px 8px; border-radius:4px; border:1px solid var(--border2); background:var(--surface2); color:var(--text); cursor:pointer; outline:none; }
+.reminder-date:focus { border-color:var(--accent); }
+.reminder-note { font-family:'Space Mono',monospace; font-size:9px; color:var(--text-dim); margin-top:2px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reminder-badge { font-family:'Space Mono',monospace; font-size:9px; padding:2px 6px; border-radius:10px; display:inline-block; }
+.reminder-badge.pending { background:rgba(245,158,11,.15); color:var(--warm); }
+.reminder-badge.callback { background:rgba(167,139,250,.15); color:var(--purple); }
+.reminder-badge.not-interested { background:rgba(239,68,68,.1); color:var(--hot); }
+.reminder-badge.no-answer { background:rgba(107,114,128,.15); color:var(--text-dim); }
+.phone-cell { font-family:'Space Mono',monospace; font-size:12px; white-space:nowrap; }
+.website-link { 
+  display:inline-block; padding:4px 8px; border-radius:6px; background:var(--purple-bg); 
+  color:var(--purple); font-size:10px; font-weight:700; text-decoration:none; 
+  border:1px solid rgba(167,139,250,.2); transition:all .2s; cursor:pointer; 
+}
+.website-link:hover { background:rgba(167,139,250,.2); border-color:var(--purple); }
+#error-banner { display:none; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:var(--radius); padding:13px 16px; color:#fca5a5; font-family:'Space Mono',monospace; font-size:12px; margin-bottom:18px; line-height:1.6; }
+
+@media(max-width:700px){
+  .brand-title{font-size:30px;}
+  .setup-card{padding:20px;}
+  .field-row{grid-template-columns:1fr;}
+  #results-screen{padding:12px;}
+  .results-topbar{flex-direction:column;align-items:flex-start;}
+  .action-cell{flex-direction:row;}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="brand">
+    <div class="brand-tag">Client Acquisition System</div>
+    <div class="brand-title">Review<span>Scout</span> Pro</div>
+    <div class="brand-sub">Call list · AI talking points · PDF proposals · GHL handoff</div>
+    <div class="free-badge">✓ Google Places · AI-Powered · Full Pipeline</div>
+  </div>
+
+  <div class="setup-card">
+
+    <div id="error-banner"></div>
+
+    <div class="section-label">🔍 Search</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">City / Area</label>
+        <input class="field-input" id="city" type="text" placeholder="e.g. Austin, TX" />
+      </div>
+      <div class="field-group">
+        <div class="field-label-row">
+          <label class="field-label">Radius (miles)</label>
+          <span class="field-value" id="radius-val">15</span>
+        </div>
+        <input class="range-input" id="radius" type="range" min="1" max="31" value="15" oninput="$('radius-val').textContent=this.value" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Industry</label>
+        <select class="field-input" id="industry" onchange="toggleCustomIndustry()">
+          <option value="restaurants">🍽️ Restaurants</option>
+          <option value="beautysvc">💇 Beauty Salons</option>
+          <option value="spas">💆 Spas & Wellness</option>
+          <option value="gyms">🏋️ Gyms & Fitness</option>
+          <option value="dentists">🦷 Dental</option>
+          <option value="doctors">🏥 Medical</option>
+          <option value="autorepair">🚗 Auto Repair</option>
+          <option value="realestate">🏠 Real Estate</option>
+          <option value="lawyers">⚖️ Legal</option>
+          <option value="accountants">📊 Accounting</option>
+          <option value="electricians">⚡ Electricians</option>
+          <option value="plumbing">🔧 Plumbers</option>
+          <option value="roofing">🏗️ Contractors</option>
+          <option value="veterinarians">🐾 Veterinarians</option>
+          <option value="animalcare">🐹 Animal Care / Pets</option>
+          <option value="cleaningservices">🧹 Cleaning</option>
+          <option value="landscaping">🌿 Landscaping</option>
+          <option value="bars">🍺 Bars</option>
+          <option value="bakeries">🥐 Bakeries</option>
+          <option value="custom">Other / Custom...</option>
+        </select>
+        <div id="custom-industry-wrap" style="display:none; margin-top:8px;">
+          <input class="field-input" id="custom-industry-text" type="text" placeholder="Enter industry (e.g. Roofers)" />
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label-row">
+          <label class="field-label">Max Results</label>
+          <span class="field-value" id="max-results-val">35</span>
+        </div>
+        <input class="range-input" id="max-results" type="range" min="10" max="60" step="5" value="35" oninput="$('max-results-val').textContent=this.value" />
+      </div>
+    </div>
+
+    <button class="btn-generate" id="btn-generate" onclick="runSearch()">⚡ Generate Call List</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-orb"></div>
+  <div class="loading-text">Building Your System</div>
+  <div class="loading-step" id="loading-step">Connecting to Google Places...</div>
+  <div class="loading-bar"><div class="loading-bar-fill" id="loading-bar-fill"></div></div>
+</div>
+
+<!-- RESULTS -->
+<div id="results-screen">
+  <div class="results-topbar">
+    <div>
+      <div class="results-title" id="results-title">Call List</div>
+      <div class="results-meta" id="results-meta"></div>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-outline" onclick="goBack()">← New Search</button>
+      <button class="btn btn-primary" onclick="exportCSV()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="stat-total">0</div></div>
+    <div class="stat-card"><div class="stat-label">🔥 Hot</div><div class="stat-value hot" id="stat-hot">0</div></div>
+    <div class="stat-card"><div class="stat-label">⚡ Warm</div><div class="stat-value warm" id="stat-warm">0</div></div>
+    <div class="stat-card"><div class="stat-label">❄️ Cold</div><div class="stat-value cold" id="stat-cold">0</div></div>
+    <div class="stat-card"><div class="stat-label">✅ Interested</div><div class="stat-value green" id="stat-interested">0</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-value" id="stat-rating">—</div></div>
+  </div>
+
+  <div class="enrich-bar" id="enrich-bar">
+    <div class="enrich-spinner"></div>
+    <span id="enrich-text">Generating AI talking points...</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortTable('score')" data-col="score" class="sorted">Score ↓</th>
+          <th onclick="sortTable('name')" data-col="name">Business ↕</th>
+          <th onclick="sortTable('website')" data-col="website">Website ↕</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th onclick="sortTable('rating')" data-col="rating">Rating ↕</th>
+          <th onclick="sortTable('reviewCount')" data-col="reviewCount">Reviews ↕</th>
+          <th onclick="sortTable('recentReviews6m')" data-col="recentReviews6m">6mo Reviews ↕</th>
+          <th onclick="sortTable('monthlyVelocity')" data-col="monthlyVelocity">Velocity ↕</th>
+          <th>Priority</th>
+          <th>Signals</th>
+          <th>Follow-Up</th>
+          <th>VA Name</th>
+          <th>AI Talking Point</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="results-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* 
+  ENVIRONMENT CONFIGURATION 
+  -------------------------
+  Bake your sensitive keys and GHL settings here.
+  This acts as your ".env" file.
+*/
+const GLOBAL_CONFIG = {
+  GOOGLE_MAPS_KEY:   "",
+  ANTHROPIC_KEY:     "",
+  GHL_DOMAIN:        "",
+  GHL_LOCATION_ID:   "",
+  GHL_LEAD_TAG:      "",
+  GHL_API_KEY:       ""
+};
+
+// STATE
+let allBusinesses = [], sortCol = 'score', sortDir = 'desc', searchParams = {}, interestedCount = 0, vaName = '';
+const PROXY = 'http://localhost:3456';
+const GOOGLE_DETAILS_URL = `${PROXY}/place-details`;
+const AI_URL = `${PROXY}/anthropic/v1/messages`;
+const LABELS   = {restaurants:'Restaurants',beautysvc:'Beauty Salons',spas:'Spas',gyms:'Gyms',dentists:'Dental',doctors:'Medical',autorepair:'Auto Repair',realestate:'Real Estate',lawyers:'Legal',accountants:'Accounting',electricians:'Electricians',plumbing:'Plumbers',roofing:'Contractors',veterinarians:'Veterinarians',animalcare:'Animal Care / Pets',cleaningservices:'Cleaning',landscaping:'Landscaping',bars:'Bars',bakeries:'Bakeries'};
+const GOOGLE_TYPES = {restaurants:'restaurant',beautysvc:'beauty_salon',spas:'spa',gyms:'gym',dentists:'dentist',doctors:'doctor',autorepair:'car_repair',realestate:'real_estate_agency',lawyers:'lawyer',accountants:'accounting',electricians:'electrician',plumbing:'plumber',roofing:'general_contractor',veterinarians:'veterinary_care',animalcare:'pet_store',cleaningservices:'laundry',landscaping:'landscaping',bars:'bar',bakeries:'bakery'};
+
+// SETTINGS PERSISTENCE
+function saveSettings() {
+  // All settings are now handled via GLOBAL_CONFIG
+}
+function loadSettings() {
+  // No persistent UI settings remaining for now
+}
+
+function $(id){return document.getElementById(id);}
+function toggleCustomIndustry() {
+  const isCustom = $('industry').value === 'custom';
+  $('custom-industry-wrap').style.display = isCustom ? 'block' : 'none';
+  if(isCustom) $('custom-industry-text').focus();
+}
+
+// GOOGLE PLACES (New API via local proxy — no CORS issues, cheaper)
+async function googlePlacesSearch(key, loc, cat, radius, limit, setStep) {
+  const type = GOOGLE_TYPES[cat] || '';
+  const query = `${LABELS[cat]||cat} in ${loc}`;
+  const p = new URLSearchParams({query, key, radius: Math.min(radius, 50000), limit, ...(type ? {type} : {})});
+  setStep && setStep(`Searching Google Places (multi-query for max results)...`);
+  const res = await fetch(`${PROXY}/google-search?${p}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Google Places error ${res.status}: ${errText.substring(0, 200)}`);
+  }
+  const data = await res.json();
+  if(data.status==='REQUEST_DENIED') throw new Error(`Google API Error: ${data.error_message || 'Enable "Places API (New)" in Google Cloud Console.'}`);
+  if(data.status==='ERROR') throw new Error(data.error_message || 'Server error');
+  if(data.status!=='OK'&&data.status!=='ZERO_RESULTS') throw new Error(`Google Places: ${data.status}`);
+  console.log(`[search] Got ${(data.results||[]).length} unique results from server`);
+  return {results: data.results || []};
+}
+
+async function getPlaceDetails(placeId, key) {
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const p = new URLSearchParams({place_id: placeId, key});
+      const res = await fetch(`${GOOGLE_DETAILS_URL}?${p}`);
+      if (!res.ok) {
+        if (attempt < MAX_RETRIES) { await sleep(600 * attempt); continue; }
+        return { phone: '—', website: '' };
+      }
+      const data = await res.json();
+      if (data.status === 'OK') {
+        return {
+          phone: data.result?.formatted_phone_number || '—',
+          website: data.result?.website || '',
+          recentReviews6m: data.result?.recentReviews6m ?? 0,
+          recentReviews3m: data.result?.recentReviews3m ?? 0,
+          monthlyVelocity: data.result?.monthlyVelocity ?? 0,
+          daysSinceLastReview: data.result?.daysSinceLastReview ?? null,
+          lastReviewDate: data.result?.lastReviewDate ?? null
+        };
+      }
+      if (attempt < MAX_RETRIES) { await sleep(600 * attempt); continue; }
+      return { phone: '—', website: '', recentReviews6m: 0, recentReviews3m: 0, monthlyVelocity: 0, daysSinceLastReview: null, lastReviewDate: null };
+    } catch(e) {
+      if (attempt < MAX_RETRIES) { await sleep(600 * attempt); continue; }
+      return { phone: '—', website: '', recentReviews6m: 0, recentReviews3m: 0, monthlyVelocity: 0, daysSinceLastReview: null, lastReviewDate: null };
+    }
+  }
+  return { phone: '—', website: '', recentReviews6m: 0, recentReviews3m: 0, monthlyVelocity: 0, daysSinceLastReview: null, lastReviewDate: null };
+}
+
+// EMAIL SCRAPING — checks multiple pages + common email patterns
+const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+const EMAIL_BLACKLIST = /\.(png|jpg|jpeg|gif|svg|webp|css|js|ico|woff|ttf|eot|map)$/i;
+const EMAIL_SPAM = /example\.com|sentry|webpack|localhost|wixpress|squarespace|wordpress|cloudflare|googleapis|schema\.org|w3\.org|change\.org|email\.com|test\.com|domain\.com|yourcompany|noreply|no-reply|mailtrap|mailgun|sendgrid/i;
+// Prefer business emails over generic ones
+const EMAIL_PRIORITY = ['info@','contact@','hello@','office@','admin@','team@','support@','sales@','inquir','reserv','book'];
+
+function extractEmails(html) {
+  if (!html) return [];
+  const found = html.match(EMAIL_REGEX) || [];
+  const clean = [...new Set(found)]
+    .map(e => e.toLowerCase().replace(/\.+$/, ''))
+    .filter(e => !EMAIL_BLACKLIST.test(e) && !EMAIL_SPAM.test(e) && e.length < 60 && !e.startsWith('.'));
+  // Sort: business emails first, then by priority keywords
+  clean.sort((a, b) => {
+    const aScore = EMAIL_PRIORITY.findIndex(p => a.includes(p));
+    const bScore = EMAIL_PRIORITY.findIndex(p => b.includes(p));
+    const aVal = aScore >= 0 ? aScore : 99;
+    const bVal = bScore >= 0 ? bScore : 99;
+    return aVal - bVal;
+  });
+  return clean;
+}
+
+async function fetchPage(url) {
+  try {
+    const res = await fetch(`${PROXY}/scrape?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.html || '';
+  } catch(e) { return ''; }
+}
+
+async function scrapeEmail(website) {
+  if (!website) return '—';
+  try {
+    // Normalize base URL
+    let base = website.replace(/\/+$/, '');
+    if (!base.startsWith('http')) base = 'https://' + base;
+    const domain = new URL(base).hostname;
+
+    // Step 1: Check homepage
+    const homeHtml = await fetchPage(base);
+    let emails = extractEmails(homeHtml);
+    if (emails.length > 0) return emails[0];
+
+    // Step 2: Find and check /contact, /about, /team pages
+    // Look for links in the homepage HTML
+    const subPages = ['/contact', '/contact-us', '/about', '/about-us', '/team', '/connect', '/get-in-touch', '/info'];
+    const foundLinks = [];
+
+    // Also check for actual links in the HTML
+    const linkRegex = /href=["']([^"']*(?:contact|about|team|connect|info|get-in-touch)[^"']*?)["']/gi;
+    let match;
+    while ((match = linkRegex.exec(homeHtml)) !== null) {
+      let href = match[1];
+      if (href.startsWith('/')) href = base + href;
+      else if (!href.startsWith('http')) href = base + '/' + href;
+      if (href.includes(domain)) foundLinks.push(href);
+    }
+
+    // Combine found links + standard paths, deduplicate
+    const pagesToCheck = [...new Set([
+      ...foundLinks.slice(0, 3),
+      ...subPages.map(p => base + p)
+    ])].slice(0, 5); // max 5 sub-pages
+
+    // Fetch sub-pages in parallel (2 at a time)
+    for (let i = 0; i < pagesToCheck.length; i += 2) {
+      const batch = pagesToCheck.slice(i, i + 2);
+      const htmls = await Promise.all(batch.map(url => fetchPage(url)));
+      for (const html of htmls) {
+        emails = extractEmails(html);
+        if (emails.length > 0) return emails[0];
+      }
+    }
+
+    // Step 3: Try mailto: links specifically (sometimes hidden in HTML attributes)
+    const mailtoRegex = /mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
+    const allHtml = homeHtml;
+    const mailtos = [];
+    while ((match = mailtoRegex.exec(allHtml)) !== null) {
+      const email = match[1].toLowerCase();
+      if (!EMAIL_BLACKLIST.test(email) && !EMAIL_SPAM.test(email)) mailtos.push(email);
+    }
+    if (mailtos.length > 0) return mailtos[0];
+
+    return '—';
+  } catch(e) {
+    return '—';
+  }
+}
+
+// SCORE — Review velocity is the #1 factor
+function scoreBusiness(b) {
+  const rc = b.user_ratings_total || 0;
+  const r = b.rating || 0;
+  const v6m = b.recentReviews6m !== undefined ? b.recentReviews6m : -1; // -1 = not yet fetched
+  const v3m = b.recentReviews3m || 0;
+  const vel = b.monthlyVelocity || 0;
+  const daysSince = b.daysSinceLastReview;
+  let score = 0;
+  const signals = [];
+
+  // ── REVIEW VELOCITY (50 points max — the #1 signal) ──
+  if (v6m >= 0) {
+    // Velocity scoring: fewer recent reviews = higher score = better lead
+    if (v6m === 0) { score += 50; signals.push('No reviews in 6 months'); }
+    else if (v6m <= 3) { score += 45; signals.push(`Only ${v6m} reviews in 6mo`); }
+    else if (v6m <= 5) { score += 40; signals.push(`${v6m} reviews in 6mo — slowing`); }
+    else if (v6m <= 10) { score += 30; signals.push(`${v6m} reviews in 6mo — moderate`); }
+    else if (v6m <= 15) { score += 18; signals.push(`${v6m} reviews in 6mo`); }
+    else if (v6m <= 20) { score += 10; signals.push(`${v6m} reviews in 6mo`); }
+    else { score += 3; signals.push(`${v6m}+ reviews in 6mo — active`); }
+
+    // Bonus: last review was a long time ago (stalled)
+    if (daysSince !== null) {
+      if (daysSince > 90) { score += 8; signals.push(`Last review ${daysSince}d ago`); }
+      else if (daysSince > 60) { score += 5; signals.push(`Last review ${daysSince}d ago`); }
+      else if (daysSince > 30) { score += 3; signals.push(`Last review ${daysSince}d ago`); }
+    }
+
+    // Bonus: had lots of reviews historically but dropped off
+    if (rc > 100 && v6m <= 5) { score += 8; signals.push('Was active, now stalled'); }
+    else if (rc > 50 && v6m <= 3) { score += 6; signals.push('Momentum lost'); }
+  } else {
+    // Velocity not yet fetched — use total count as fallback
+    if (rc === 0) { score += 45; signals.push('Zero reviews'); }
+    else if (rc < 10) { score += 38; signals.push('< 10 reviews'); }
+    else if (rc < 25) { score += 28; signals.push('< 25 reviews'); }
+    else if (rc < 50) { score += 18; signals.push('< 50 reviews'); }
+    else { score += 5; signals.push(`${rc} total reviews`); }
+  }
+
+  // ── RATING (25 points max) ──
+  if (r === 0) { score += 15; signals.push('No rating'); }
+  else if (r < 3) { score += 8; signals.push('Very low rating'); }
+  else if (r < 3.5) { score += 12; signals.push('Low rating'); }
+  else if (r < 4) { score += 25; signals.push('Below avg rating'); }
+  else if (r < 4.3) { score += 20; signals.push('Growth potential'); }
+  else if (r < 4.6) { score += 12; signals.push('Near top tier'); }
+  else if (r < 4.8) { score += 5; signals.push('Almost perfect'); }
+  else { score += 2; signals.push('Top rated'); }
+
+  // ── PENALTIES ──
+  if (b.business_status === 'CLOSED_TEMPORARILY') { score -= 10; signals.push('Temporarily closed'); }
+
+  score = Math.max(0, Math.min(100, score));
+  let priority, priorityClass;
+  if (score >= 65) { priority = '🔥 HOT'; priorityClass = 'hot'; }
+  else if (score >= 38) { priority = '⚡ WARM'; priorityClass = 'warm'; }
+  else { priority = '❄️ COLD'; priorityClass = 'cold'; }
+  return { score, priority, priorityClass, signals };
+}
+
+// AI CALL — retries on 529 overload with exponential backoff
+async function callAI(prompt, aiKey, maxTokens=80) {
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(AI_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (res.status === 529 || res.status === 503) {
+      const wait = 3000 * attempt; // 3s, 6s, 9s, 12s
+      console.warn(`[AI] Overloaded (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${wait/1000}s...`);
+      if (attempt < MAX_ATTEMPTS) { await sleep(wait); continue; }
+    }
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[ReviewScout] AI Error Detail:', errText, 'Status:', res.status);
+      throw new Error(`AI API error (${res.status}): ${errText.substring(0, 100)}`);
+    }
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim()||'';
+  }
+  throw new Error('AI API overloaded after retries');
+}
+
+// AI TALKING POINTS
+async function enrichTalkingPoints(businesses, aiKey, city) {
+  let done=0;
+  for(let i=0;i<businesses.length;i++){
+    const b=businesses[i];
+    try {
+      b.talkingPoint = await callAI(
+        `You write cold call openers for a review growth service ($99/month).\nBusiness: ${b.name}, ${city}. Industry: ${searchParams.industryLabel}. Google rating: ${b.rating||'none'}. Total reviews: ${b.reviewCount}. Reviews in last 6 months: ${b.recentReviews6m}. Monthly review velocity: ${b.monthlyVelocity}/mo. Days since last review: ${b.daysSinceLastReview||'unknown'}. Issues: ${b.signals.join(', ')}.\nFocus on their REVIEW VELOCITY — how they've slowed down or stalled recently. If they had lots of reviews but slowed, mention they've "dropped off". If velocity is low, say reviews have "dried up". Write ONE punchy opener (max 22 words) stating their velocity weakness and implying lost customers. Natural, spoken tone. Return ONLY the line.`,
+        aiKey, 80
+      );
+    } catch(e) {
+      b.talkingPoint = `${b.name} only got ${b.recentReviews6m} reviews in 6 months — their review momentum has stalled.`;
+    }
+    done++;
+    $('enrich-text').textContent=`Generating AI talking points... ${done}/${businesses.length}`;
+    const cell=$(`tp-${b.placeId}`);
+    if(cell){cell.className='talking-point ready';cell.textContent=b.talkingPoint;}
+    if(i<businesses.length-1) await sleep(320);
+  }
+  const bar=$('enrich-bar'); bar.classList.add('done');
+  $('enrich-text').textContent=`✓ ${businesses.length} AI talking points ready`;
+}
+
+// GHL — fetch custom field ID by name (cached)
+let ghlVACallerFieldId = null;
+async function getVACallerFieldId(apiKey) {
+  if (ghlVACallerFieldId) return ghlVACallerFieldId;
+  try {
+    const res = await fetch(`${PROXY}/ghl/v1/custom-fields/`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const data = await res.json();
+    const fields = data.customFields || data.custom_fields || [];
+    const match = fields.find(f => f.name?.toLowerCase().includes('va caller') || f.fieldKey?.toLowerCase().includes('va_caller'));
+    if (match) ghlVACallerFieldId = match.id;
+  } catch(e) { console.warn('[GHL] Could not fetch custom fields:', e.message); }
+  return ghlVACallerFieldId;
+}
+
+// GHL — create contact via API
+async function createGHLContact(b) {
+  const apiKey = GLOBAL_CONFIG.GHL_API_KEY;
+  const locId  = GLOBAL_CONFIG.GHL_LOCATION_ID;
+
+  if (!apiKey) { showToast('GHL_API_KEY not set in GLOBAL_CONFIG', 'error'); return; }
+
+  // Build tag from call status: "Call Back" → "ReviewScout_CallBack"
+  const statusTag = b.callStatus && b.callStatus !== 'Not Called'
+    ? 'ReviewScout_' + b.callStatus.replace(/\s+/g, '')
+    : 'ReviewScout_Interested';
+
+  const nameParts = b.name.split(' ');
+  const body = {
+    firstName:   nameParts[0],
+    lastName:    nameParts.slice(1).join(' ') || '',
+    companyName: b.name,
+    tags:        [statusTag],
+    source:      'Review Scout'
+  };
+  if (b.phone && b.phone !== '—') body.phone    = b.phone;
+  if (b.email && b.email !== '—') body.email    = b.email;
+  if (b.address)                  body.address1 = b.address;
+  if (vaName) {
+    body.tags.push(`${vaName}_ReviewScout`);
+    const fieldId = await getVACallerFieldId(apiKey);
+    if (fieldId) body.customField = [{ id: fieldId, field_value: `${vaName}_ReviewScout` }];
+  }
+
+  try {
+    const res = await fetch(`${PROXY}/ghl/v1/contacts/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    console.log('[GHL] status:', res.status, 'response:', JSON.stringify(data));
+    if (res.ok && (data.contact || data.id)) {
+      b.ghlContactId = data.contact?.id || data.id;
+      showToast(`✅ ${b.name} added to GHL`, 'success');
+    } else {
+      const msg = data.message || data.msg || JSON.stringify(data);
+      showToast(`GHL error: ${msg}`, 'error');
+    }
+  } catch(e) {
+    showToast(`GHL request failed: ${e.message}`, 'error');
+  }
+}
+
+// GHL — update contact tag when follow-up status changes
+async function updateGHLContact(b) {
+  const apiKey = GLOBAL_CONFIG.GHL_API_KEY;
+  if (!apiKey || !b.ghlContactId) return;
+
+  const statusTag = b.callStatus && b.callStatus !== 'Not Called'
+    ? 'ReviewScout_' + b.callStatus.replace(/\s+/g, '')
+    : 'ReviewScout_Interested';
+
+  try {
+    const res = await fetch(`${PROXY}/ghl/v1/contacts/${b.ghlContactId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ tags: [statusTag] })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`🔄 ${b.name} updated in GHL`, 'success');
+    } else {
+      const msg = data.message || data.msg || JSON.stringify(data);
+      showToast(`GHL update error: ${msg}`, 'error');
+    }
+  } catch(e) {
+    showToast(`GHL update failed: ${e.message}`, 'error');
+  }
+}
+
+function showToast(msg, type='success') {
+  let t = document.getElementById('ghl-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'ghl-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-family:Space Mono,monospace;font-size:13px;font-weight:700;z-index:9999;transition:opacity .4s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background  = type === 'success' ? '#10b981' : '#ef4444';
+  t.style.color       = '#fff';
+  t.style.opacity     = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+}
+
+// PDF REPORT
+async function generateReport(idx) {
+  const b=allBusinesses[idx];
+  const aiKey=GLOBAL_CONFIG.ANTHROPIC_KEY;
+  const btn=$(`rep-${b.placeId}`);
+  if(!aiKey){alert('Configure Anthropic API key in GLOBAL_CONFIG to generate reports.');return;}
+  // Open window immediately (sync with click) so popup blocker doesn't kill it
+  const win = window.open('','_blank');
+  if(!win){alert('Popup blocked! Please allow popups for this page.');return;}
+  win.document.write('<!DOCTYPE html><html><head><title>Generating Report...</title></head><body style="background:#07090e;color:#f59e0b;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>Generating report...</p></body></html>');
+  win.document.close();
+  btn.disabled=true; btn.textContent='⏳ Writing...';
+  try {
+    const content = await callAI(
+      `Write a short professional review gap sales proposal for a $99/month review growth service.\n\nBusiness: ${b.name}\nLocation: ${b.address}\nIndustry: ${searchParams.industryLabel}\nGoogle Rating: ${b.rating||'No rating'}\nTotal Reviews: ${b.reviewCount}\nReviews in Last 6 Months: ${b.recentReviews6m}\nMonthly Review Velocity: ${b.monthlyVelocity}/mo\nDays Since Last Review: ${b.daysSinceLastReview||'unknown'}\nOpportunity Score: ${b.score}/100\nWeaknesses: ${b.signals.join(', ')}\n\nSections (use these exact headers):\n1. THE PROBLEM — Focus on their review VELOCITY decline. How they've slowed or stalled.\n2. WHAT IT IS COSTING YOU — Quantify lost customers due to stale reviews.\n3. WHAT WE DO — Explain review velocity growth system.\n4. YOUR RESULTS IN 90 DAYS\n5. GET STARTED\n\nTone: direct, confident, consultant-style. Each section 2-3 sentences. Section 4 use bullet points. Section 5 mention $99/month. Return ONLY the report content.`,
+      aiKey, 700
+    );
+    openReportWindow(b, content, win);
+  } catch(e) {
+    console.error('[ReviewScout] Report error:', e);
+    win.close();
+    alert('Failed to generate report: ' + e.message);
+  }
+  btn.disabled=false; btn.textContent='📄 Get Report';
+}
+
+function openReportWindow(b, content, win) {
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const sc=b.priorityClass==='hot'?'#ef4444':b.priorityClass==='warm'?'#f59e0b':'#60a5fa';
+  const priorityLabel=b.priority.replace(/[🔥⚡❄️]/g,'').trim();
+
+  // Parse AI content — handle markdown headers, bullets, paragraphs
+  let html=content.split('\n').map(line=>{
+    line=line.trim(); if(!line)return '';
+    // # Title or ## SECTION HEADER or ### header or numbered headers like "1. THE PROBLEM"
+    if(/^#{1,3}\s+/.test(line)){
+      const text=line.replace(/^#{1,3}\s+/,'');
+      return `<h3 class="section-hdr">${text}</h3>`;
+    }
+    if(/^\d+\.\s+[A-Z]/.test(line)||/^[A-Z][A-Z\s]{5,}$/.test(line)||/^\*\*[A-Z].*\*\*$/.test(line)){
+      const text=line.replace(/^\d+\.\s+/,'').replace(/\*\*/g,'');
+      return `<h3 class="section-hdr">${text}</h3>`;
+    }
+    if(/^[-•*]\s/.test(line))
+      return `<li>${line.replace(/^[-•*]\s+/,'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</li>`;
+    return `<p>${line.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>`;
+  }).filter(Boolean).join('\n');
+
+  if(!win) win=window.open('','_blank');
+  win.document.open();
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Review Gap Report — ${b.name}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:#f1f5f9;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+  .page{max-width:720px;margin:0 auto;background:#fff;box-shadow:0 4px 40px rgba(0,0,0,.08);}
+
+  /* HEADER */
+  .hdr{background:linear-gradient(135deg,#07090e 0%,#111827 100%);padding:44px 48px 36px;position:relative;overflow:hidden;}
+  .hdr::after{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);border-radius:50%;}
+  .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;position:relative;z-index:1;}
+  .logo{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px;}
+  .logo span{color:#f59e0b;}
+  .badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.25);}
+  .date{font-family:'Space Mono',monospace;font-size:11px;color:#6b7280;}
+  .biz-name{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.5px;position:relative;z-index:1;}
+  .biz-addr{font-size:13px;color:#9ca3af;position:relative;z-index:1;}
+
+  /* METRICS */
+  .metrics{display:flex;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;margin-top:24px;position:relative;z-index:1;}
+  .met{flex:1;padding:18px 22px;border-right:1px solid rgba(255,255,255,.06);}
+  .met:last-child{border-right:none;}
+  .ml{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#6b7280;margin-bottom:8px;}
+  .mv{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:${sc};line-height:1;}
+  .ms{font-size:11px;color:#6b7280;margin-top:4px;}
+
+  /* BODY */
+  .body{padding:40px 48px 36px;}
+  .subj{font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;letter-spacing:-.3px;}
+  .subj-line{width:48px;height:3px;background:#f59e0b;border-radius:2px;margin-bottom:28px;}
+
+  .section-hdr{font-size:13px;font-weight:800;color:#111827;text-transform:uppercase;letter-spacing:1.5px;margin:28px 0 10px;padding:8px 0 8px 14px;border-left:3px solid #f59e0b;background:linear-gradient(90deg,rgba(245,158,11,.06) 0%,transparent 100%);}
+  .section-hdr:first-child{margin-top:0;}
+
+  p{color:#374151;font-size:14px;line-height:1.75;margin:8px 0;}
+  li{color:#374151;font-size:14px;line-height:1.75;margin:6px 0;padding-left:6px;}
+  ul{padding-left:20px;margin:10px 0;}
+  strong{color:#111827;font-weight:700;}
+
+  /* CTA */
+  .cta{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);border-radius:12px;padding:28px 30px;margin-top:32px;position:relative;overflow:hidden;}
+  .cta::after{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.1);border-radius:50%;}
+  .cta-title{color:#000;font-weight:800;font-size:17px;margin-bottom:6px;position:relative;z-index:1;}
+  .cta-sub{font-size:13px;color:rgba(0,0,0,.55);font-weight:500;position:relative;z-index:1;}
+
+  /* FOOTER */
+  .footer{padding:20px 48px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;font-family:'Space Mono',monospace;font-size:10px;color:#9ca3af;}
+  .footer-logo{font-weight:700;color:#6b7280;}
+
+  /* PRINT */
+  .print-bar{text-align:center;padding:24px;background:#f1f5f9;}
+  .print-bar button{padding:12px 32px;background:#111827;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s;}
+  .print-bar button:hover{background:#1f2937;}
+  @page{margin:0;size:auto;}
+  @media print{
+    .print-bar{display:none!important;}
+    body{background:#fff;margin:0;}
+    .page{box-shadow:none;max-width:100%;}
+    .hdr{padding:36px 40px 28px;}
+    .body{padding:32px 40px 28px;}
+    .footer{padding:16px 40px;}
+  }
+  </style></head><body><div class="page">
+  <div class="hdr">
+    <div class="hdr-top">
+      <div><div class="logo">Review<span>Scout</span> Pro</div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><span class="badge">Confidential Report</span><div class="date">${today}</div></div>
+    </div>
+    <div class="biz-name">${b.name}</div>
+    <div class="biz-addr">${b.address}</div>
+    <div class="metrics">
+      <div class="met"><div class="ml">Google Rating</div><div class="mv">${b.rating?b.rating.toFixed(1)+' &#9733;':'N/A'}</div><div class="ms">Current average</div></div>
+      <div class="met"><div class="ml">Total Reviews</div><div class="mv">${(b.reviewCount||0).toLocaleString()}</div><div class="ms">On Google</div></div>
+      <div class="met"><div class="ml">6-Month Reviews</div><div class="mv">${b.recentReviews6m||0}</div><div class="ms">${b.monthlyVelocity||0}/mo velocity</div></div>
+      <div class="met"><div class="ml">Opportunity Score</div><div class="mv">${b.score}<span style="font-size:13px;color:#6b7280">/100</span></div><div class="ms">${priorityLabel} priority</div></div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="subj">Review Gap Analysis &mdash; ${searchParams.industryLabel||'Business'}</div>
+    <div class="subj-line"></div>
+    ${html}
+    <div class="cta">
+      <div class="cta-title">Ready to grow your reviews? Start today for $99/month.</div>
+      <div class="cta-sub">Cancel anytime &middot; No setup fees &middot; Results in 30&ndash;90 days</div>
+    </div>
+  </div>
+  <div class="footer"><span class="footer-logo">ReviewScout Pro</span><span>Prepared for ${b.name}</span></div>
+  </div>
+  <div class="print-bar"><button onclick="window.print()">Save as PDF</button></div>
+  </body></html>`);
+  win.document.close();
+}
+
+// FOLLOW-UP REMINDER
+function renderReminderCell(b) {
+  const statusOptions = ['Not Called','Snapshot Requested','Spoke - Follow Up','Call Back','Left Voicemail','Not Interested','No Answer'];
+  const st = b.callStatus || 'Not Called';
+  const dt = b.reminderDate || '';
+  const note = b.reminderNote || '';
+
+  // Status badge color
+  let badgeClass = '';
+  if (st === 'Call Back' || st === 'Spoke - Follow Up') badgeClass = 'callback';
+  else if (st === 'No Answer' || st === 'Left Voicemail') badgeClass = 'no-answer';
+  else if (st === 'Not Interested') badgeClass = 'not-interested';
+  else badgeClass = 'pending';
+
+  const selectHtml = `<select class="reminder-status" onchange="setCallStatus('${b.placeId}', this.value)" title="Call status">
+    ${statusOptions.map(o => `<option value="${o}" ${o === st ? 'selected' : ''}>${o}</option>`).join('')}
+  </select>`;
+
+  const dateHtml = '';
+
+  const noteHtml = (st !== 'Not Called')
+    ? `<input type="text" class="reminder-status" placeholder="Add note..." value="${note}" onchange="setReminderNote('${b.placeId}', this.value)" style="font-size:9px;color:var(--text-dim);" title="Note">`
+    : '';
+
+  const reminderInfo = '';
+
+  return `<div class="reminder-wrap">
+    ${selectHtml}
+    ${dateHtml}
+    ${noteHtml}
+    ${reminderInfo}
+  </div>`;
+}
+
+const VA_OPTIONS = ['','Mike','Kip','Angie','Teri'];
+
+function setVAName(val) {
+  vaName = val;
+  document.querySelectorAll('select.va-select').forEach(el => el.value = val);
+}
+
+function setCallStatus(placeId, status) {
+  const b = allBusinesses.find(x => x.placeId === placeId);
+  if (!b) return;
+  b.callStatus = status;
+  if (status === 'Not Called') { b.reminderDate = ''; b.reminderNote = ''; }
+  if (b.interested && b.ghlContactId) updateGHLContact(b);
+  renderTable();
+}
+
+function setReminderDate(placeId, date) {
+  const b = allBusinesses.find(x => x.placeId === placeId);
+  if (!b) return;
+  b.reminderDate = date;
+}
+
+function setReminderNote(placeId, note) {
+  const b = allBusinesses.find(x => x.placeId === placeId);
+  if (!b) return;
+  b.reminderNote = note;
+}
+
+// MARK INTERESTED
+function markInterested(placeId) {
+  const b=allBusinesses.find(x=>x.placeId===placeId); if(!b)return;
+  b.interested=!b.interested;
+  const btn=$(`int-${placeId}`), row=$(`row-${placeId}`);
+  if(b.interested){btn.textContent='✅ Sent to GHL';btn.classList.add('marked');row?.classList.add('interested-row');interestedCount++;createGHLContact(b);}
+  else{btn.textContent='➕ Send to GHL';btn.classList.remove('marked');row?.classList.remove('interested-row');interestedCount=Math.max(0,interestedCount-1);}
+  $('stat-interested').textContent=interestedCount;
+}
+
+// RENDER TABLE
+function renderTable() {
+  const sorted=[...allBusinesses].sort((a,b)=>{
+    let av=a[sortCol],bv=b[sortCol];
+    if(typeof av==='string')av=av.toLowerCase();
+    if(typeof bv==='string')bv=bv.toLowerCase();
+    if(av<bv)return sortDir==='asc'?-1:1;
+    if(av>bv)return sortDir==='asc'?1:-1;
+    return 0;
+  });
+  const tbody=$('results-tbody');
+  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;padding:50px;color:var(--text-dim);font-family:'Space Mono',monospace;font-size:12px;">No results found.</td></tr>`;return;}
+  tbody.innerHTML=sorted.map((b,i)=>{
+    const bc=b.priorityClass==='hot'?'var(--hot)':b.priorityClass==='warm'?'var(--warm)':'var(--cold)';
+    const idx=allBusinesses.indexOf(b);
+    const rHtml=b.rating?`<span class="rating-badge"><span class="star">★</span>${b.rating.toFixed(1)}</span>`:`<span class="no-data">—</span>`;
+    const cc=b.reviewCount===0?'low':b.reviewCount<25?'low':b.reviewCount<60?'mid':'ok';
+    const rcHtml=b.reviewCount===0?`<span class="review-count low">0 &larr; opportunity</span>`:`<span class="review-count ${cc}">${b.reviewCount.toLocaleString()}</span>`;
+    // Velocity columns
+    const v6c = b.recentReviews6m <= 3 ? 'low' : b.recentReviews6m <= 10 ? 'mid' : 'ok';
+    const v6Html = `<span class="review-count ${v6c}">${b.recentReviews6m}</span>`;
+    const velLabel = b.monthlyVelocity <= 1 ? 'Stalled' : b.monthlyVelocity <= 3 ? 'Slow' : 'Active';
+    const velColor = b.monthlyVelocity <= 1 ? 'var(--hot)' : b.monthlyVelocity <= 3 ? 'var(--warm)' : 'var(--cold)';
+    const velHtml = `<span style="font-family:'Space Mono',monospace;font-size:11px;color:${velColor};font-weight:700;">${b.monthlyVelocity}/mo<br><span style="font-size:9px;opacity:.7;">${velLabel}</span></span>`;
+    const tpHtml=b.talkingPoint?`<div class="talking-point ready" id="tp-${b.placeId}">${b.talkingPoint}</div>`:`<div class="talking-point loading" id="tp-${b.placeId}">Generating...</div>`;
+    const phHtml=b.phone&&b.phone!=='—'?`<span class="phone-cell">${b.phone}</span>`:`<span class="no-data">—</span>`;
+    const emHtml=b.email&&b.email!=='—'?`<a href="mailto:${b.email}" class="phone-cell" style="color:var(--accent);text-decoration:none;" title="${b.email}">${b.email}</a>`:`<span class="no-data">—</span>`;
+    const wbHtml=b.website?`<a href="${b.website}" target="_blank" class="website-link" title="${b.website}">🌐 Visit Site</a>`:`<span class="no-data">—</span>`;
+    const nm=b.googleUrl?`<a href="${b.googleUrl}" target="_blank" style="color:var(--text);text-decoration:none;">${b.name}</a>`:b.name;
+    return `<tr id="row-${b.placeId}" class="${b.interested?'interested-row':''}">
+      <td><div class="score-wrap"><span class="score-num" style="color:${bc}">${b.score}</span><div class="score-bar"><div class="score-bar-fill" style="width:${b.score}%;background:${bc}"></div></div></div><div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:3px;">#${i+1}</div></td>
+      <td class="col-name">${nm}<small>${b.address}</small></td>
+      <td>${wbHtml}</td>
+      <td>${phHtml}</td>
+      <td>${emHtml}</td>
+      <td>${rHtml}</td>
+      <td>${rcHtml}</td>
+      <td>${v6Html}</td>
+      <td>${velHtml}</td>
+      <td><span class="priority-badge priority-${b.priorityClass}">${b.priority}</span></td>
+      <td><div style="font-family:'Space Mono',monospace;font-size:10px;color:#fff;line-height:1.5;">${(b.signals||[]).map(s=>`<span style="display:inline-block;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:1px 6px;margin:1px 2px;white-space:nowrap;">${s}</span>`).join('')}</div></td>
+      <td class="reminder-cell">${renderReminderCell(b)}</td>
+      <td><select class="reminder-status va-select" onchange="setVAName(this.value)">
+        ${VA_OPTIONS.map(o=>`<option value="${o}" ${o===vaName?'selected':''}>${o||'— VA —'}</option>`).join('')}
+      </select></td>
+      <td>${tpHtml}</td>
+      <td><div class="action-cell">
+        <button class="btn-int${b.interested?' marked':''}" id="int-${b.placeId}" onclick="markInterested('${b.placeId}')">${b.interested?'✅ Sent to GHL':'➕ Send to GHL'}</button>
+        <button class="btn-rep" id="rep-${b.placeId}" onclick="generateReport(${idx})">📄 Get Report</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function sortTable(col) {
+  if(sortCol===col)sortDir=sortDir==='asc'?'desc':'asc';else{sortCol=col;sortDir=col==='score'?'desc':'asc';}
+  document.querySelectorAll('th[data-col]').forEach(th=>{th.classList.remove('sorted');});
+  const a=document.querySelector(`th[data-col="${col}"]`);
+  if(a)a.classList.add('sorted');
+  renderTable();
+}
+
+// STATS
+function updateStats() {
+  $('stat-total').textContent=allBusinesses.length;
+  $('stat-hot').textContent=allBusinesses.filter(b=>b.priorityClass==='hot').length;
+  $('stat-warm').textContent=allBusinesses.filter(b=>b.priorityClass==='warm').length;
+  $('stat-cold').textContent=allBusinesses.filter(b=>b.priorityClass==='cold').length;
+  $('stat-interested').textContent=interestedCount;
+  const w=allBusinesses.filter(b=>b.rating>0);
+  $('stat-rating').textContent=w.length?(w.reduce((s,b)=>s+b.rating,0)/w.length).toFixed(1):'—';
+}
+
+// CSV EXPORT
+function exportCSV() {
+  const s=[...allBusinesses].sort((a,b)=>b.score-a.score);
+  const h=['Rank','Business Name','Website','Phone','Email','Address','Rating','Total Reviews','Reviews 6mo','Velocity/mo','Days Since Last Review','Score','Priority','Call Status','Reminder Date','Reminder Note','Interested','AI Talking Point','Signals','Google Maps URL'];
+  const clean=t=>(t||'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\u2014/g,'-').replace(/\u2013/g,'-').replace(/\u2026/g,'...').replace(/[🔥⚡❄️]/g,'');
+  const fmtDate=d=>d?new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';
+  const rows=s.map((b,i)=>[i+1,`"${clean(b.name).replace(/"/g,'""')}"`,`"${clean(b.website).replace(/"/g,'""')}"`,`"${clean(b.phone)}"`,`"${clean(b.email)||'N/A'}"`,`"${clean(b.address).replace(/"/g,'""')}"`,b.rating||'N/A',b.reviewCount,b.recentReviews6m||0,b.monthlyVelocity||0,b.daysSinceLastReview!==null?b.daysSinceLastReview:'N/A',b.score,clean(b.priority).trim()||'COLD',`"${b.callStatus||'Not Called'}"`,`"${fmtDate(b.reminderDate)}"`,`"${clean(b.reminderNote||'').replace(/"/g,'""')}"`,b.interested?'Yes':'No',`"${clean(b.talkingPoint).replace(/"/g,'""')}"`,`"${clean(b.signals.join(', '))}"`,`"${b.googleUrl}"`]);
+  const csv='\uFEFF'+[h.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download=`call-list-${(searchParams.city||'').replace(/\s+/g,'-').toLowerCase()}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+// MAIN SEARCH
+async function runSearch() {
+  const googleKey=GLOBAL_CONFIG.GOOGLE_MAPS_KEY, ai=GLOBAL_CONFIG.ANTHROPIC_KEY;
+  const city=$('city').value.trim(), rad=parseFloat($('radius').value)||5;
+  let cat=$('industry').value, max=parseInt($('max-results').value)||35;
+  let industryLabel = LABELS[cat] || cat;
+  if(cat === 'custom') {
+    industryLabel = $('custom-industry-text').value.trim() || 'Business';
+    cat = industryLabel.toLowerCase();
+  }
+  hideError();
+  if(!googleKey || googleKey === "PASTE_YOUR_GOOGLE_KEY_HERE"){showError('Please configure your Google Maps API key in the GLOBAL_CONFIG section at the top of the file.');return;}
+  if(!city){showError('Please enter a city or area.');return;}
+  saveSettings();
+  searchParams={city,radiusMi:rad,category:cat,industryLabel};
+  allBusinesses=[];interestedCount=0;
+  $('btn-generate').disabled=true;
+  showLoading();setProgress(10);setStep('Connecting to Google Places...');
+  try {
+    const rm=Math.round(rad*1609.34);
+    setProgress(30);setStep('Fetching businesses...');
+    // Fetch extra results to account for filtering (many will be filtered by velocity)
+    const fetchLimit = Math.min(max * 2, 60); // Fetch 2x to have enough after filtering
+    const data=await googlePlacesSearch(googleKey,city,cat,rm,fetchLimit,setStep);
+    const raw=(data.results||[]).filter(b=>b.business_status!=='CLOSED_PERMANENTLY');
+    if(!raw.length){$('btn-generate').disabled=false;showError(`No ${searchParams.industryLabel} found in "${city}" within ${rad} miles. Try larger radius.`);goBack();return;}
+    setProgress(65);setStep(`Scoring ${raw.length} businesses...`);
+    allBusinesses=raw.map(b=>{
+      const {score,priority,priorityClass,signals}=scoreBusiness(b);
+      const addr=b.formatted_address||'';
+      const googleUrl=b.url||`https://www.google.com/maps/place/?q=place_id:${b.place_id}`;
+      return {placeId:b.place_id,name:b.name,address:addr,phone:'—',email:'—',rating:b.rating||0,reviewCount:b.user_ratings_total||0,recentReviews6m:0,recentReviews3m:0,monthlyVelocity:0,daysSinceLastReview:null,lastReviewDate:null,googleUrl,interested:false,talkingPoint:'',score,priority,priorityClass,signals,callStatus:'Not Called',reminderDate:'',reminderNote:''};
+    }).sort((a,b)=>b.score-a.score);
+
+    setProgress(70); setStep(`Fetching details + review velocity (0/${allBusinesses.length})...`);
+    const chunkSize = 4;
+    let phonesDone = 0;
+    for (let i = 0; i < allBusinesses.length; i += chunkSize) {
+      const chunk = allBusinesses.slice(i, i + chunkSize);
+      await Promise.all(chunk.map(async (b) => {
+        const details = await getPlaceDetails(b.placeId, googleKey);
+        b.phone = details.phone;
+        b.website = details.website;
+        b.recentReviews6m = details.recentReviews6m ?? 0;
+        b.recentReviews3m = details.recentReviews3m ?? 0;
+        b.monthlyVelocity = details.monthlyVelocity ?? 0;
+        b.daysSinceLastReview = details.daysSinceLastReview ?? null;
+        b.lastReviewDate = details.lastReviewDate ?? null;
+        // Re-score with velocity data
+        const {score, priority, priorityClass, signals} = scoreBusiness(b);
+        b.score = score; b.priority = priority; b.priorityClass = priorityClass; b.signals = signals;
+      }));
+      phonesDone = Math.min(i + chunkSize, allBusinesses.length);
+      setProgress(70 + Math.floor((phonesDone / allBusinesses.length) * 15));
+      setStep(`Analyzing review velocity (${phonesDone}/${allBusinesses.length})...`);
+      if (i + chunkSize < allBusinesses.length) await sleep(200);
+    }
+
+    // Filter: remove 0 reviews AND only keep businesses with 20 or fewer reviews in last 6 months
+    const beforeFilter = allBusinesses.length;
+    allBusinesses = allBusinesses.filter(b => b.reviewCount > 0 && b.recentReviews6m <= 20);
+    console.log(`[filter] Kept ${allBusinesses.length}/${beforeFilter} businesses (>0 reviews, ≤20 reviews in 6mo)`);
+
+    // Re-sort by score after velocity re-scoring
+    allBusinesses.sort((a, b) => b.score - a.score);
+
+    // Scrape emails from business websites
+    setProgress(85);setStep(`Scraping emails (0/${allBusinesses.length})...`);
+    const emailChunkSize = 3;
+    let emailsDone = 0;
+    for (let i = 0; i < allBusinesses.length; i += emailChunkSize) {
+      const chunk = allBusinesses.slice(i, i + emailChunkSize);
+      await Promise.all(chunk.map(async (b) => {
+        b.email = await scrapeEmail(b.website);
+      }));
+      emailsDone = Math.min(i + emailChunkSize, allBusinesses.length);
+      setProgress(85 + Math.floor((emailsDone / allBusinesses.length) * 10));
+      setStep(`Deep-scraping emails (${emailsDone}/${allBusinesses.length})... checking contact pages`);
+      if (i + emailChunkSize < allBusinesses.length) await sleep(300);
+    }
+
+    setProgress(95);setStep('Preparing results...');
+    $('results-title').textContent=`${city} — ${searchParams.industryLabel} Call List`;
+    $('results-meta').textContent=`${allBusinesses.length} qualified leads (≤20 reviews/6mo) · ${rad} mile radius · ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+    updateStats();renderTable();setProgress(100);
+    setTimeout(()=>{
+      showResults();
+      if(ai){enrichTalkingPoints(allBusinesses,ai,city);}
+      else{
+        $('enrich-bar').classList.add('done');
+        $('enrich-text').textContent='⚠ Add Anthropic API key to enable AI talking points & PDF reports';
+        allBusinesses.forEach(b=>{b.talkingPoint=`${b.name} has ${b.reviewCount} reviews — strong growth opportunity.`;const c=$(`tp-${b.placeId}`);if(c){c.className='talking-point ready';c.textContent=b.talkingPoint;}});
+      }
+    },400);
+  } catch(err) {
+    console.error(err);$('btn-generate').disabled=false;goBack();showError(err.message||'Something went wrong. Check your API keys.');
+  }
+}
+
+// HELPERS
+function setStep(t){$('loading-step').textContent=t;}
+function setProgress(p){$('loading-bar-fill').style.width=p+'%';}
+function showError(m){const b=$('error-banner');b.textContent='⚠ '+m;b.style.display='block';}
+function hideError(){$('error-banner').style.display='none';}
+function showLoading(){$('setup-screen').style.display='none';$('loading-screen').style.display='flex';$('results-screen').style.display='none';}
+function showResults(){$('setup-screen').style.display='none';$('loading-screen').style.display='none';$('results-screen').style.display='block';}
+function goBack(){$('setup-screen').style.display='flex';$('loading-screen').style.display='none';$('results-screen').style.display='none';$('btn-generate').disabled=false;}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&$('setup-screen').style.display!=='none')runSearch();});
+window.addEventListener('load',loadSettings);
+</script>
+</body>
+</html>
