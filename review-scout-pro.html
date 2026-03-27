@@ -318,6 +318,7 @@ td { padding:12px 13px; vertical-align:middle; }
 */
 const GLOBAL_CONFIG = {
   GOOGLE_MAPS_KEY:   "",
+  SERP_API_KEY:      "",
   ANTHROPIC_KEY:     "",
   GHL_DOMAIN:        "",
   GHL_LOCATION_ID:   "",
@@ -325,7 +326,7 @@ const GLOBAL_CONFIG = {
   GHL_API_KEY:       ""
 };
 
-// STATE
+// STATE    
 let allBusinesses = [], sortCol = 'score', sortDir = 'desc', searchParams = {}, interestedCount = 0, vaName = '';
 const PROXY = 'http://localhost:3456';
 const GOOGLE_DETAILS_URL = `${PROXY}/place-details`;
@@ -371,7 +372,7 @@ async function getPlaceDetails(placeId, key) {
   const MAX_RETRIES = 3;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const p = new URLSearchParams({place_id: placeId, key});
+      const p = new URLSearchParams({place_id: placeId, key, google_key: GLOBAL_CONFIG.GOOGLE_MAPS_KEY});
       const res = await fetch(`${GOOGLE_DETAILS_URL}?${p}`);
       if (!res.ok) {
         if (attempt < MAX_RETRIES) { await sleep(600 * attempt); continue; }
@@ -1031,7 +1032,7 @@ function exportCSV() {
 
 // MAIN SEARCH
 async function runSearch() {
-  const googleKey=GLOBAL_CONFIG.GOOGLE_MAPS_KEY, ai=GLOBAL_CONFIG.ANTHROPIC_KEY;
+  const googleKey=GLOBAL_CONFIG.GOOGLE_MAPS_KEY, serpKey=GLOBAL_CONFIG.SERP_API_KEY, ai=GLOBAL_CONFIG.ANTHROPIC_KEY;
   const city=$('city').value.trim(), rad=parseFloat($('radius').value)||5;
   let cat=$('industry').value, max=parseInt($('max-results').value)||35;
   let industryLabel = LABELS[cat] || cat;
@@ -1040,7 +1041,8 @@ async function runSearch() {
     cat = industryLabel.toLowerCase();
   }
   hideError();
-  if(!googleKey || googleKey === "PASTE_YOUR_GOOGLE_KEY_HERE"){showError('Please configure your Google Maps API key in the GLOBAL_CONFIG section at the top of the file.');return;}
+  if(!googleKey){showError('Please configure your Google Maps API key in GLOBAL_CONFIG.');return;}
+  if(!serpKey || serpKey === "your-serpapi-key-here"){showError('Please configure your SerpApi key in GLOBAL_CONFIG.');return;}
   if(!city){showError('Please enter a city or area.');return;}
   saveSettings();
   searchParams={city,radiusMi:rad,category:cat,industryLabel};
@@ -1069,7 +1071,7 @@ async function runSearch() {
     for (let i = 0; i < allBusinesses.length; i += chunkSize) {
       const chunk = allBusinesses.slice(i, i + chunkSize);
       await Promise.all(chunk.map(async (b) => {
-        const details = await getPlaceDetails(b.placeId, googleKey);
+        const details = await getPlaceDetails(b.placeId, serpKey);
         b.phone = details.phone;
         b.website = details.website;
         b.recentReviews6m = details.recentReviews6m ?? 0;

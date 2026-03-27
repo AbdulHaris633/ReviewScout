@@ -64,7 +64,7 @@ function scrapeUrl(targetUrl, res) {
   req.end();
 }
 
-// ── GENERIC PROXY (for Anthropic API) ───────────────────────────────────
+// ── GENERIC PROXY (for Anthropic + GHL APIs) ────────────────────────────
 const STRIP_REQ_HEADERS = new Set([
   'host', 'origin', 'referer', 'sec-fetch-dest', 'sec-fetch-mode',
   'sec-fetch-site', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
@@ -123,7 +123,7 @@ function proxy(targetUrl, req, res) {
   req.pipe(proxyReq);
 }
 
-// ── PLACES API (NEW) — Server-side search + details ─────────────────────
+// ── GOOGLE PLACES API — Business Search ─────────────────────────────────
 
 function placesApiFetch(path, body, apiKey) {
   return new Promise((resolve, reject) => {
@@ -140,7 +140,6 @@ function placesApiFetch(path, body, apiKey) {
         'Content-Length': Buffer.byteLength(postData)
       }
     };
-    // Remove our internal _fieldMask from the body
     delete body._fieldMask;
     const actualData = JSON.stringify(body);
     opts.headers['Content-Length'] = Buffer.byteLength(actualData);
@@ -149,10 +148,8 @@ function placesApiFetch(path, body, apiKey) {
       const chunks = [];
       proxyRes.on('data', chunk => chunks.push(chunk));
       proxyRes.on('end', () => {
-        try {
-          const text = Buffer.concat(chunks).toString();
-          resolve(JSON.parse(text));
-        } catch (e) { reject(e); }
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+        catch(e) { reject(e); }
       });
     });
     req.on('error', reject);
@@ -160,11 +157,10 @@ function placesApiFetch(path, body, apiKey) {
   });
 }
 
-// New API: Search Text
 async function newPlacesSearch(query, apiKey, maxResults, type, radiusMeters, locationBias) {
   const body = {
     textQuery: query,
-    maxResultCount: Math.min(maxResults, 20), // New API max is 20 per request
+    maxResultCount: Math.min(maxResults, 20),
     languageCode: 'en'
   };
   if (type) body.includedType = type;
@@ -177,99 +173,19 @@ async function newPlacesSearch(query, apiKey, maxResults, type, radiusMeters, lo
     };
   }
   body._fieldMask = 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.businessStatus,places.types,places.googleMapsUri,places.location';
-
-  const data = await placesApiFetch('/v1/places:searchText', body, apiKey);
-  return data;
+  return placesApiFetch('/v1/places:searchText', body, apiKey);
 }
 
-// New API: Place Details (phone + website + reviews for velocity analysis)
-async function newPlaceDetails(placeId, apiKey) {
-  return new Promise((resolve, reject) => {
-    const opts = {
-      hostname: 'places.googleapis.com',
-      port: 443,
-      path: `/v1/places/${placeId}`,
-      method: 'GET',
-      headers: {
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'nationalPhoneNumber,internationalPhoneNumber,websiteUri,reviews'
-      }
-    };
-
-    console.log(`[details] GET places/${placeId}`);
-
-    const req = https.request(opts, (proxyRes) => {
-      const chunks = [];
-      proxyRes.on('data', chunk => chunks.push(chunk));
-      proxyRes.on('end', () => {
-        try {
-          const data = JSON.parse(Buffer.concat(chunks).toString());
-
-          // Analyze review velocity from review dates
-          const reviews = data.reviews || [];
-          const now = new Date();
-          const sixMonthsAgo = new Date(now);
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          const threeMonthsAgo = new Date(now);
-          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-          let recentReviews6m = 0;
-          let recentReviews3m = 0;
-          let lastReviewDate = null;
-
-          for (const r of reviews) {
-            const reviewDate = r.publishTime ? new Date(r.publishTime) : null;
-            if (reviewDate) {
-              if (!lastReviewDate || reviewDate > lastReviewDate) lastReviewDate = reviewDate;
-              if (reviewDate >= sixMonthsAgo) recentReviews6m++;
-              if (reviewDate >= threeMonthsAgo) recentReviews3m++;
-            }
-          }
-
-          // Calculate days since last review
-          const daysSinceLastReview = lastReviewDate
-            ? Math.floor((now - lastReviewDate) / (1000 * 60 * 60 * 24))
-            : null;
-
-          // Monthly velocity (based on 6-month window)
-          const monthlyVelocity = recentReviews6m / 6;
-
-          console.log(`[details] ${placeId}: reviews_6m=${recentReviews6m} reviews_3m=${recentReviews3m} velocity=${monthlyVelocity.toFixed(1)}/mo lastReview=${daysSinceLastReview}d ago`);
-
-          resolve({
-            phone: data.nationalPhoneNumber || data.internationalPhoneNumber || '',
-            website: data.websiteUri || '',
-            recentReviews6m,
-            recentReviews3m,
-            monthlyVelocity: Math.round(monthlyVelocity * 10) / 10,
-            daysSinceLastReview,
-            lastReviewDate: lastReviewDate ? lastReviewDate.toISOString() : null,
-            totalReviewsFetched: reviews.length
-          });
-        } catch (e) {
-          resolve({ phone: '', website: '', recentReviews6m: 0, recentReviews3m: 0, monthlyVelocity: 0, daysSinceLastReview: null, lastReviewDate: null, totalReviewsFetched: 0 });
-        }
-      });
-    });
-    req.on('error', () => resolve({ phone: '', website: '', recentReviews6m: 0, recentReviews3m: 0, monthlyVelocity: 0, daysSinceLastReview: null, lastReviewDate: null, totalReviewsFetched: 0 }));
-    req.end();
-  });
-}
-
-// ── MULTI-QUERY SEARCH (New API) ────────────────────────────────────────
-// Run multiple varied queries and deduplicate by place id to get 50+ unique results
-
+// Multi-query search with Google Places — deduplicates for max unique results
 async function googleSearchMultiQuery(params, res) {
   const { query, key, radius, type, limit } = params;
   const maxResults = Math.min(parseInt(limit) || 60, 60);
   const rad = parseInt(radius) || 50000;
 
-  // Parse "category in location" format
   const parts = query.match(/^(.+?)\s+in\s+(.+)$/i);
   const cat = parts ? parts[1] : query;
   const loc = parts ? parts[2] : '';
 
-  // New API type mapping (singular lowercase)
   const NEW_API_TYPES = {
     'restaurant': 'restaurant', 'beauty_salon': 'beauty_salon', 'spa': 'spa',
     'gym': 'gym', 'dentist': 'dentist', 'doctor': 'doctor',
@@ -281,7 +197,6 @@ async function googleSearchMultiQuery(params, res) {
   };
   const newType = NEW_API_TYPES[type] || '';
 
-  // Extract city/neighborhood for query variations
   let city = loc;
   let neighborhood = '';
   if (loc.includes(',')) {
@@ -290,7 +205,6 @@ async function googleSearchMultiQuery(params, res) {
     city = locParts.slice(1).join(', ');
   }
 
-  // Build varied queries
   const queries = [query];
   if (parts) {
     queries.push(`${cat} near ${loc}`);
@@ -313,14 +227,11 @@ async function googleSearchMultiQuery(params, res) {
     queries.push(`${query} services`);
   }
 
-  const seen = new Map(); // place id -> result (converted to legacy format)
-
-  // First query also gives us a location for subsequent queries
+  const seen = new Map();
   let locationBias = null;
 
   for (let i = 0; i < queries.length; i++) {
     if (seen.size >= maxResults) break;
-
     const q = queries[i];
     console.log(`[search] Query ${i + 1}/${queries.length}: "${q}"`);
 
@@ -328,7 +239,7 @@ async function googleSearchMultiQuery(params, res) {
       const data = await newPlacesSearch(q, key, 20, i === 0 ? newType : '', rad, locationBias);
 
       if (data.error) {
-        console.log(`[search] -> ERROR: ${data.error.message || JSON.stringify(data.error)}`);
+        console.log(`[search] ERROR: ${data.error.message || JSON.stringify(data.error)}`);
         if (i === 0) {
           const result = JSON.stringify({ status: 'REQUEST_DENIED', error_message: data.error.message || 'API error' });
           res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'content-length': Buffer.byteLength(result) });
@@ -339,12 +250,11 @@ async function googleSearchMultiQuery(params, res) {
 
       const places = data.places || [];
       console.log(`[search] -> ${places.length} results`);
-
       let newCount = 0;
+
       for (const p of places) {
         const placeId = p.id;
         if (!seen.has(placeId)) {
-          // Convert to legacy-style format for the HTML frontend
           seen.set(placeId, {
             place_id: placeId,
             name: p.displayName?.text || p.displayName || 'Unknown',
@@ -357,80 +267,220 @@ async function googleSearchMultiQuery(params, res) {
             geometry: p.location ? { location: { lat: p.location.latitude, lng: p.location.longitude } } : null
           });
           newCount++;
-
-          // Use first result's location as bias for subsequent queries
           if (!locationBias && p.location) {
             locationBias = { lat: p.location.latitude, lng: p.location.longitude };
           }
         }
       }
-      console.log(`[search] -> ${newCount} new, ${places.length - newCount} duplicates. Total unique: ${seen.size}`);
+      console.log(`[search] -> ${newCount} new, ${places.length - newCount} dupes. Total unique: ${seen.size}`);
 
-    } catch (e) {
+    } catch(e) {
       console.error(`[search] Query ${i + 1} error: ${e.message}`);
     }
   }
 
   const allResults = Array.from(seen.values()).slice(0, maxResults);
   console.log(`[search] Done! Returning ${allResults.length} unique results`);
-
   const combined = JSON.stringify({
     status: allResults.length > 0 ? 'OK' : 'ZERO_RESULTS',
     results: allResults
   });
-  res.writeHead(200, {
-    'content-type': 'application/json',
-    'access-control-allow-origin': '*',
-    'content-length': Buffer.byteLength(combined)
-  });
+  res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'content-length': Buffer.byteLength(combined) });
   res.end(combined);
 }
 
-// ── PLACE DETAILS ENDPOINT (New API) ────────────────────────────────────
+// ── SERPAPI — Reviews Only ───────────────────────────────────────────────
+
+function serpApiFetch(params) {
+  return new Promise((resolve, reject) => {
+    const qs = new URLSearchParams(params).toString();
+    const opts = {
+      hostname: 'serpapi.com',
+      port: 443,
+      path: '/search.json?' + qs,
+      method: 'GET'
+    };
+    const req = https.request(opts, (proxyRes) => {
+      const chunks = [];
+      proxyRes.on('data', chunk => chunks.push(chunk));
+      proxyRes.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+        catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// Parse relative date strings like "4 hours ago", "2 months ago", "a year ago"
+function parseRelativeDate(dateStr, now) {
+  if (!dateStr) return null;
+  const s = dateStr.trim().toLowerCase();
+  const n = now || new Date();
+  const match = s.match(/^(a|an|\d+)\s+(hour|day|week|month|year)s?\s+ago$/);
+  if (!match) return null;
+  const qty = (match[1] === 'a' || match[1] === 'an') ? 1 : parseInt(match[1], 10);
+  const unit = match[2];
+  const d = new Date(n);
+  if (unit === 'hour')  d.setHours(d.getHours() - qty);
+  else if (unit === 'day')   d.setDate(d.getDate() - qty);
+  else if (unit === 'week')  d.setDate(d.getDate() - qty * 7);
+  else if (unit === 'month') d.setMonth(d.getMonth() - qty);
+  else if (unit === 'year')  d.setFullYear(d.getFullYear() - qty);
+  return d;
+}
+
+// Fetch ALL reviews via SerpApi — stops once reviews pass 6-month cutoff
+async function serpReviews(placeId, apiKey) {
+  const now = new Date();
+  const sixMonthsAgo = new Date(now);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const threeMonthsAgo = new Date(now);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  let recentReviews6m = 0;
+  let recentReviews3m = 0;
+  let lastReviewDate = null;
+  let nextPageToken = null;
+  let phone = '';
+  let website = '';
+  let done = false;
+  let totalFetched = 0;
+  let page = 0;
+  const MAX_PAGES = 5; // safety cap — 5 pages × 20 reviews = 100 reviews max
+
+  do {
+    const params = {
+      engine: 'google_maps_reviews',
+      place_id: placeId,
+      sort_by: 'newestFirst',
+      api_key: apiKey,
+      hl: 'en'
+    };
+    if (nextPageToken) params.next_page_token = nextPageToken;
+
+    console.log(`[reviews] ${placeId} page ${page + 1}`);
+    const data = await serpApiFetch(params);
+
+    if (data.error) {
+      console.log(`[reviews] SerpApi error: ${JSON.stringify(data.error)}`);
+      break;
+    }
+
+    // Phone + website from place_info on first page
+    if (page === 0 && data.place_info) {
+      phone = data.place_info.phone || '';
+      website = data.place_info.website || '';
+    }
+
+    const reviews = data.reviews || [];
+    console.log(`[reviews] page ${page + 1} returned ${reviews.length} reviews. First date: ${reviews[0]?.iso_date || reviews[0]?.date || 'n/a'}`);
+    totalFetched += reviews.length;
+
+    // Count all reviews on this page (don't break mid-page — sort may not be perfect)
+    for (const r of reviews) {
+      const reviewDate = r.iso_date ? new Date(r.iso_date) : parseRelativeDate(r.date, now);
+      if (!reviewDate) continue;
+      if (!lastReviewDate || reviewDate > lastReviewDate) lastReviewDate = reviewDate;
+      if (reviewDate >= sixMonthsAgo) {
+        recentReviews6m++;
+        if (reviewDate >= threeMonthsAgo) recentReviews3m++;
+      }
+    }
+
+    // Only stop fetching more pages if the LAST review on this page is older than 6 months
+    const lastInPage = reviews[reviews.length - 1];
+    const lastInPageDate = lastInPage ? (lastInPage.iso_date ? new Date(lastInPage.iso_date) : parseRelativeDate(lastInPage.date, now)) : null;
+    if (lastInPageDate && lastInPageDate < sixMonthsAgo) done = true;
+
+    nextPageToken = data.serpapi_pagination?.next_page_token;
+    page++;
+    if (!nextPageToken || reviews.length === 0 || page >= MAX_PAGES) done = true;
+
+  } while (!done);
+
+  const daysSinceLastReview = lastReviewDate
+    ? Math.floor((now - lastReviewDate) / (1000 * 60 * 60 * 24))
+    : null;
+  const monthlyVelocity = Math.round((recentReviews6m / 6) * 10) / 10;
+
+  console.log(`[reviews] ${placeId}: 6m=${recentReviews6m} 3m=${recentReviews3m} vel=${monthlyVelocity}/mo lastReview=${daysSinceLastReview}d totalFetched=${totalFetched}`);
+
+  return { phone, website, recentReviews6m, recentReviews3m, monthlyVelocity, daysSinceLastReview, lastReviewDate: lastReviewDate ? lastReviewDate.toISOString() : null, totalReviewsFetched: totalFetched };
+}
+
+// Google Places — phone + website only
+function googlePlaceDetails(placeId, apiKey) {
+  return new Promise((resolve) => {
+    const opts = {
+      hostname: 'places.googleapis.com',
+      port: 443,
+      path: `/v1/places/${placeId}`,
+      method: 'GET',
+      headers: {
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'nationalPhoneNumber,internationalPhoneNumber,websiteUri'
+      }
+    };
+    const req = https.request(opts, (proxyRes) => {
+      const chunks = [];
+      proxyRes.on('data', chunk => chunks.push(chunk));
+      proxyRes.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString());
+          resolve({
+            phone: data.nationalPhoneNumber || data.internationalPhoneNumber || '',
+            website: data.websiteUri || ''
+          });
+        } catch(e) { resolve({ phone: '', website: '' }); }
+      });
+    });
+    req.on('error', () => resolve({ phone: '', website: '' }));
+    req.end();
+  });
+}
+
+// ── PLACE DETAILS ENDPOINT ───────────────────────────────────────────────
+// Google Places → phone + website | SerpApi → reviews
 async function handlePlaceDetails(params, res) {
-  const { place_id, key } = params;
+  const { place_id, key, google_key } = params;
   if (!place_id || !key) {
     res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ status: 'ERROR', error_message: 'Missing place_id or key' }));
   }
-
   try {
-    const details = await newPlaceDetails(place_id, key);
+    // Run both in parallel
+    const [contact, reviews] = await Promise.all([
+      google_key ? googlePlaceDetails(place_id, google_key) : Promise.resolve({ phone: '', website: '' }),
+      serpReviews(place_id, key)
+    ]);
+
     const result = JSON.stringify({
       status: 'OK',
       result: {
-        formatted_phone_number: details.phone,
-        website: details.website,
-        recentReviews6m: details.recentReviews6m,
-        recentReviews3m: details.recentReviews3m,
-        monthlyVelocity: details.monthlyVelocity,
-        daysSinceLastReview: details.daysSinceLastReview,
-        lastReviewDate: details.lastReviewDate,
-        totalReviewsFetched: details.totalReviewsFetched
+        formatted_phone_number: contact.phone || reviews.phone,
+        website: contact.website || reviews.website,
+        recentReviews6m: reviews.recentReviews6m,
+        recentReviews3m: reviews.recentReviews3m,
+        monthlyVelocity: reviews.monthlyVelocity,
+        daysSinceLastReview: reviews.daysSinceLastReview,
+        lastReviewDate: reviews.lastReviewDate,
+        totalReviewsFetched: reviews.totalReviewsFetched
       }
     });
-    res.writeHead(200, {
-      'content-type': 'application/json',
-      'access-control-allow-origin': '*',
-      'content-length': Buffer.byteLength(result)
-    });
+    res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'content-length': Buffer.byteLength(result) });
     res.end(result);
-  } catch (e) {
+  } catch(e) {
     console.error(`[details] Error: ${e.message}`);
     const result = JSON.stringify({ status: 'OK', result: {} });
-    res.writeHead(200, {
-      'content-type': 'application/json',
-      'access-control-allow-origin': '*',
-      'content-length': Buffer.byteLength(result)
-    });
+    res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'content-length': Buffer.byteLength(result) });
     res.end(result);
   }
 }
 
 // ── HTTP SERVER ──────────────────────────────────────────────────────────
-
 const server = http.createServer((req, res) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'access-control-allow-origin': '*',
@@ -443,7 +493,7 @@ const server = http.createServer((req, res) => {
 
   const reqPath = req.url;
 
-  // Handle /google-search — multi-query search with New API
+  // Business search — Google Places API (fast + cheap)
   if (reqPath.startsWith('/google-search?')) {
     const params = new URL(reqPath, 'http://localhost').searchParams;
     const query = params.get('query');
@@ -452,24 +502,16 @@ const server = http.createServer((req, res) => {
       res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
       return res.end(JSON.stringify({ status: 'ERROR', error_message: 'Missing query or key' }));
     }
-    return googleSearchMultiQuery({
-      query, key,
-      radius: params.get('radius') || '50000',
-      type: params.get('type') || '',
-      limit: params.get('limit') || '60'
-    }, res);
+    return googleSearchMultiQuery({ query, key, radius: params.get('radius') || '50000', type: params.get('type') || '', limit: params.get('limit') || '60' }, res);
   }
 
-  // Handle /place-details — New API place details
+  // Reviews — SerpApi (accurate, all reviews, stops at 6-month cutoff)
   if (reqPath.startsWith('/place-details?')) {
     const params = new URL(reqPath, 'http://localhost').searchParams;
-    return handlePlaceDetails({
-      place_id: params.get('place_id'),
-      key: params.get('key')
-    }, res);
+    return handlePlaceDetails({ place_id: params.get('place_id'), key: params.get('key'), google_key: params.get('google_key') }, res);
   }
 
-  // Handle /scrape?url=... route
+  // Email scraping
   if (reqPath.startsWith('/scrape?')) {
     const params = new URL(reqPath, 'http://localhost').searchParams;
     const targetUrl = params.get('url');
@@ -480,18 +522,16 @@ const server = http.createServer((req, res) => {
     return scrapeUrl(targetUrl, res);
   }
 
-  // Anthropic proxy (still needed for AI calls)
+  // Anthropic proxy
   if (reqPath.startsWith('/anthropic/')) {
     const rest = reqPath.slice('/anthropic/'.length);
-    const targetUrl = 'https://api.anthropic.com/' + rest;
-    return proxy(targetUrl, req, res);
+    return proxy('https://api.anthropic.com/' + rest, req, res);
   }
 
-  // GHL proxy — avoids CORS when calling GHL API from browser
+  // GHL proxy
   if (reqPath.startsWith('/ghl/')) {
     const rest = reqPath.slice('/ghl/'.length);
-    const targetUrl = 'https://rest.gohighlevel.com/' + rest;
-    return proxy(targetUrl, req, res);
+    return proxy('https://rest.gohighlevel.com/' + rest, req, res);
   }
 
   res.writeHead(404, { 'content-type': 'text/plain' });
